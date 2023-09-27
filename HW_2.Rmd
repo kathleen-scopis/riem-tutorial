@@ -1,0 +1,199 @@
+---
+title: "Tracking Weather Patterns with 'riem'"
+author: "Kathleen Scopis"
+date: "`r Sys.Date()`"
+TOC: true
+code folding: hide
+output: html_document
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+Planners and public decision makers often rely on analyses relating to
+geography and the natural environment. From predicting train delays to
+addressing climate change, it is important to know historic weather
+patterns for an area in order to better make predictions for the future.
+The *'riem'* package helps to select ASOS stations (more on that below)
+and report on the area's historical weather-related sensor readings. The
+package is clean and simple to use, able to pull holistic data with just
+a few lines of code.
+
+## Step 1: Loading 'riem' Package
+
+Before you can use the package's functions to pull data, it must first
+be loaded into the environment. Using *install.packages()* and
+*library()*, install the *riem* package and activate it in the project's
+library.
+
+```{r 1}
+#install.packages('riem')
+library(riem)
+
+# other libraries needed for plotting
+library(tidyverse)
+library(ggplot2)
+```
+
+## Step 2: ASOS Network List
+
+*'riem'* pulls information from the **Automated Surface/Weather
+Observing Systems (ASOS)**. In order to select from the correct station,
+first access the list of ASOS networks using the *riem_networks()*
+command.
+
+```{r 2}
+riem_networks()
+```
+
+## Step 3: ASOS Station List
+
+For this example, we will be observing sensor readings from Richmond, a
+city in Virginia. To acquire the station ID, input the corresponding
+network code obtained from running *riem_networks()*. According to the
+last step, Virginia's corresponding ASOS network code is 'VA_ASOS'.
+
+```{r 3}
+riem_stations(network = 'VA_ASOS')
+```
+
+## Step 4: Pull Station Data
+
+Once the station ID is selected, use *riem_measures()* to obtain
+historical weather data. The syntax is as follows:
+
+--- ***station:*** station ID
+
+--- ***date_start:*** starting date of the desired data, typically in
+YYYY-MM-DD format
+
+--- ***date_end:*** ending date of the desired data, typically in
+YYYY-MM-DD format
+
+The resulting dataset features several columns, each representing a
+different quality observed by the sensors. The data may include:
+
+--- ***station***: three or four character site identifier
+
+--- ***valid:*** timestamp of the observation (in UTC)
+
+--- ***tmpf:*** Air Temperature (F), typically \@ 2 meters
+
+--- ***dwpf***: Dew Point Temperature (F), typically \@ 2 meters
+
+--- ***relh***: Relative Humidity in
+
+--- ***drct***: Wind Direction in degrees from north
+
+--- ***sknt***: Wind Speed in knots riem_measures 3
+
+--- ***p01i***: One hour precipitation for the period from the
+observation time to the time of the previous hourly precipitation reset.
+This varies slightly by site. Values are in inches. This value may or
+may not contain frozen precipitation melted by some device on the sensor
+or estimated by some other means. Unfortunately, we do not know of an
+authoritative database denoting which station has which sensor. • alti:
+Pressure altimeter in inches
+
+--- ***mslp***: Sea Level Pressure in millibar
+
+--- ***vsby***: Visibility in miles
+
+--- ***gust***: Wind Gust in knots
+
+--- ***skyc1***: Sky Level 1 Coverage
+
+--- ***skyc2***: Sky Level 2 Coverage
+
+--- ***skyc3:*** Sky Level 3 Coverage
+
+--- ***skyc4***: Sky Level 4 Coverage
+
+--- ***skyl1:*** Sky Level 1 Altitude in feet
+
+--- ***skyl2:*** Sky Level 2 Altitude in feet
+
+--- ***skyl3***: Sky Level 3 Altitude in feet
+
+--- ***skyl4:*** Sky Level 4 Altitude in feet
+
+--- ***presentwx:*** Present Weather Codes (space seperated), see e.g.
+Chapter 8 of [this
+manual](https://www.ofcm.gov/publications/fmh/FMH1/FMH1.pdf) for further
+explanations.
+
+--- ***feel***: Apparent Temperature (Wind Chill or Heat Index) in degF
+
+--- ***ice_accretion_1hr***: Ice Accretion over 1 Hour in inch
+
+--- ***ice_accretion_3hr***: Ice Accretion over 3 Hour in inch
+
+--- ***ice_accretion_6hr:*** Ice Accretion over 6 Hour in inch
+
+--- ***elh:*** Relative Humidity in
+
+--- ***metar***: unprocessed reported observation in METAR format
+
+--- ***peak_wind_gust***: Wind gust in knots from the METAR PK WND
+remark, this value may be different than the value found in the gust
+field. The gust field is derived from the standard METAR wind report.
+
+--- ***peak_wind_drct***: The wind direction in degrees North denoted in
+the METAR PK WND remark.
+
+--- ***peak_wind_time***: The timestamp of the PK WND value in the same
+timezone as the valid field and controlled by the tz parameter.
+
+# Example Analysis
+
+Using the *riem* package, the following code pulls one week of
+historical weather data for Richmond, VA, then graphs a few significant
+variables.
+
+```{r 4}
+# pull data
+weather.Data <- riem_measures(
+  station = "OFP",
+  date_start = "2023-09-17",
+  date_end = "2023-09-23") %>% 
+  filter(!is.na(tmpf)) # remove NAs
+
+# plot data
+par(mfrow = c(2,2))
+(ggplot(weather.Data, aes(valid, tmpf))
+    + geom_line()
+    + labs(title = "Temperature",
+           subtitle = "Richmond, VA",
+           x = "date",
+           y = "temperature (F)")
+    )
+(ggplot(weather.Data, aes(valid, relh))
+    + geom_line()
+    + labs(title = "Relative Humidity",
+           subtitle = "Richmond, VA",
+           x = "date",
+           y = "humidity (%)")
+    )
+(ggplot(weather.Data, aes(valid, sknt))
+    + geom_line()
+    + labs(title = "Wind Speed",
+           subtitle = "Richmond, VA",
+           x = "date",
+           y = "speed (knots)")
+    )
+(ggplot(weather.Data, aes(valid, vsby))
+    + geom_line()
+    + labs(title = "Visibility",
+           subtitle = "Richmond, VA",
+           x = "date",
+           y = "visibility (miles)")
+    )
+
+
+```
